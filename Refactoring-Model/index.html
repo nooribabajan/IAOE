@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light">
-<title>Refactoring Workbench v0.8.9 — source cleanup</title>
+<title>Refactoring Workbench v0.9.0 — whole-file audit</title>
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#e8edf7;background:#0a1020;font-synthesis:none}*{box-sizing:border-box}body{margin:0;min-width:320px}header{padding:25px clamp(16px,4vw,44px);background:#111a2e;border-bottom:1px solid #2a3853}h1{font-size:clamp(1.6rem,4vw,2.45rem);margin:.2rem 0 .5rem;letter-spacing:-.035em}h2{font-size:1.12rem;margin:0}h3{font-size:.98rem;margin:0 0 10px}.eyebrow{font-size:.72rem;letter-spacing:.14em;font-weight:800;color:#7dd3fc;margin:0 0 8px}.muted,.help{color:#a7b5cc;line-height:1.55}.muted{margin:0;max-width:850px}main{max-width:1200px;margin:auto;padding:20px clamp(12px,3vw,26px) 40px;display:grid;gap:16px}.panel{background:#111a2d;border:1px solid #293853;border-radius:16px;padding:clamp(14px,2.6vw,22px);min-width:0}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0}.tab{background:#1c2941;color:#dbe7f9;border:1px solid #394966}.tab.active{background:#7dd3fc;color:#082033;border-color:#7dd3fc}.pane{display:none}.pane.active{display:grid;gap:16px}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:block;font-size:.9rem;font-weight:650;margin-bottom:6px}.field{min-width:0}input[type=file],select,textarea{width:100%;border:1px solid #3b4a66;background:#080f1e;color:#e6edf8;border-radius:9px;padding:10px;font:inherit}textarea{min-height:190px;resize:vertical;font: .82rem/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2}textarea.tall{min-height:300px}button{border:0;border-radius:9px;padding:10px 14px;font:inherit;font-weight:750;cursor:pointer;background:#7dd3fc;color:#082033}button.secondary{background:#263650;color:#e7eefb;border:1px solid #40516f}button:disabled{opacity:.4;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.stat{border:1px solid #2a3954;border-radius:10px;background:#0b1426;padding:11px;min-width:0}.stat small{display:block;color:#9cacc5}.stat strong{display:block;font-size:1.25rem;margin-top:4px;overflow-wrap:anywhere}.results{display:grid;gap:8px}.item{padding:11px 12px;border:1px solid #31405a;border-left:4px solid #7dd3fc;border-radius:9px;background:#0b1426;overflow-wrap:anywhere}.item.warning{border-left-color:#fbbf24}.item.error{border-left-color:#fb7185}.item.info{border-left-color:#7dd3fc}.item p{margin:5px 0 0;color:#afbdd1;line-height:1.5;font-size:.88rem}.badge{font-size:.72rem;letter-spacing:.04em;font-weight:800;color:#b7c7de}.status{padding:10px 12px;background:#0b1426;border:1px solid #2a3954;border-radius:9px;color:#aebed5;line-height:1.5}.diff{font: .8rem/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:560px;overflow:auto;background:#080e1a;border:1px solid #293853;border-radius:10px;padding:12px}footer{text-align:center;color:#8291aa;padding:0 12px 24px;font-size:.8rem}@media(max-width:700px){.row{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head>
 <body>
-<header><p class="eyebrow">LOCAL-FIRST · WORKBENCH 0.8.9 · SOURCE CLEANUP</p><h1>Refactoring Workbench</h1><p class="muted">Local-first source cleanup · HTML/CSS/JavaScript/JSON review · compare files · CSV/JSON profiling. Input files stay in this browser.</p></header>
+<header><p class="eyebrow">LOCAL-FIRST · WORKBENCH 0.9.0 · WHOLE-FILE AUDIT</p><h1>Refactoring Workbench</h1><p class="muted">Local-first source cleanup · HTML/CSS/JavaScript/JSON review · compare files · CSV/JSON profiling. Input files stay in this browser.</p></header>
 <main>
 <nav class="tabs" aria-label="Workbench tools"><button class="tab active" data-tab="html">HTML audit</button><button class="tab" data-tab="compare">Compare & merge</button><button class="tab" data-tab="data">CSV / JSON analysis</button><button class="tab" data-tab="code">Code health</button><button class="tab" data-tab="repair">Repair / Refactor</button></nav>
 <section id="html" class="pane active">
@@ -29,7 +29,7 @@
 <div class="panel"><p class="eyebrow">05 / DIRECT CLEANUP</p><h2>Build a cleaned source copy</h2><p class="help">Load HTML in the HTML tab, then build a separate copy. This pass removes empty ordinary CSS rules, repeated identical declarations, and adjacent top-level CSS rules with identical declaration blocks. It preserves HTML markup, JavaScript, comments, conditional CSS, and uncertain code rather than guessing.</p><div class="actions"><button id="buildAutoRefactor">Build cleaned copy</button><button id="downloadRefactor" class="secondary" disabled>Download cleaned copy</button></div><p id="autoRefactorStatus" class="status">No cleaned copy generated.</p><label for="repairOutput" style="margin-top:14px">Cleaned source</label><textarea id="repairOutput" class="tall" readonly placeholder="The changed source will appear here."></textarea></div>
 </section>
 <div class="panel"><p class="eyebrow">CLEANUP LIMITS</p><ul class="help"><li>Files are processed locally in this browser.</li><li>The automatic pass deduplicates safe CSS declarations/rules, removes simple class/ID rules with no static references, removes declaration-only const/let bindings with primitive literal values, and compacts whitespace in valid embedded JSON without changing string contents or keys. Dynamic markup or dynamic code disables the relevant removal pass; arbitrary HTML/JavaScript dead code is not guessed.</li><li>Uncertain code, comments, dynamic behavior, and conditional rules are preserved by this pass.</li><li>The original source remains unchanged; download the cleaned copy only after reviewing it.</li></ul></div>
-</main><footer>Refactoring Workbench v0.8.6 · direct refactoring workspace</footer>
+</main><footer>Refactoring Workbench v0.9.0 · whole-file audit + refactoring workspace</footer>
 <script>
  const escRe=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 'use strict';
@@ -227,4 +227,295 @@ function buildConservativeRefactor(source){
 }
 $('buildAutoRefactor').addEventListener('click',()=>{try{const current=$('htmlSource').value;if(!current.trim())throw Error('Load or paste the target HTML in the HTML tab first.');const result=buildConservativeRefactor(current);if(result.source===current||!result.changes.length){$('repairOutput').value=current;$('downloadRefactor').disabled=true;$('autoRefactorStatus').textContent='No safe cleanup changes were found; the source was left unchanged.';return;}$('repairOutput').value=result.source;$('downloadRefactor').disabled=false;const removed=current.length-result.source.length;const counts=result.changes.reduce((a,c)=>{const k=c.operation.includes('css')||c.operation.includes('CSS')?'CSS':c.operation.includes('js')||c.operation.includes('debugger')?'JavaScript':c.operation.includes('json')?'JSON':c.operation.includes('html')?'HTML':'Source hygiene';a[k]=(a[k]||0)+1;return a;},{});const summary=Object.entries(counts).map(([k,v])=>`${v} ${k}`).join(', ');$('autoRefactorStatus').textContent=`Created a cleaned copy: ${result.changes.length} cleanup operation(s) (${summary}); ${removed} bytes removed. Original input remains unchanged.`;}catch(e){$('repairOutput').value='';$('downloadRefactor').disabled=true;$('autoRefactorStatus').textContent=`Cleanup stopped: ${e.message||String(e)}`;}});
 $('downloadRefactor').addEventListener('click',()=>{const value=$('repairOutput').value;if(value)download('refactored-source.html',value,'text/html');});
+</script><script>
+/*
+ * IAE Refactoring Workbench — Whole-File Audit Upgrade
+ * Add this script to Refactoring-Model/index.html immediately before </body>,
+ * or include it as an external audit-upgrade.js file.
+ *
+ * Conservative by design: audits class/ID usage, CSS/JS references, repeated
+ * selectors, duplicate visible leaf text, and exact duplicate source lines.
+ * It reports candidates; it does not automatically delete DOM/CSS/JS because
+ * static scans cannot prove that a repeated item is semantically redundant.
+ */
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const state = { findings: [], source: "" };
+
+  function makePanel() {
+    if ($("iaeWholeFileAuditPanel")) return;
+    const host = $("repair") || document.querySelector("main") || document.body;
+    const panel = document.createElement("section");
+    panel.id = "iaeWholeFileAuditPanel";
+    panel.className = "panel";
+    panel.innerHTML = `
+      <p class="eyebrow">WHOLE-FILE AUDIT</p>
+      <h2>Whole-file audit ledger</h2>
+      <p class="help">Audit HTML, CSS, JavaScript, class/ID roles, component areas, repeated selectors, repeated visible lesson text, and exact duplicate source lines. The audit reports candidates; safe cleanup is limited to duplicate standalone plain-text lines.</p>
+      <div class="actions">
+        <button type="button" id="iaeRunAudit">Audit current HTML</button>
+        <button type="button" id="iaeCleanLines" class="secondary">Build duplicate-line-cleaned copy</button>
+        <button type="button" id="iaeDownloadClean" class="secondary" disabled>Download cleaned copy</button>
+        <button type="button" id="iaeDownloadAudit" class="secondary">Download report</button>
+      </div>
+      <p id="iaeAuditStatus" class="status" aria-live="polite">Ready. Load or paste HTML, then run the audit.</p>
+      <label for="iaeCleanOutput" style="display:block;margin-top:12px">Duplicate-line-cleaned copy (only repeated standalone plain-text lines are removed)</label>
+      <textarea id="iaeCleanOutput" class="tall" readonly placeholder="Run the cleanup to build a separate copy. The original source remains unchanged."></textarea>
+      <div id="iaeAuditResults" class="results" aria-live="polite"></div>`;
+    host.appendChild(panel);
+
+    $("iaeRunAudit").addEventListener("click", () => {
+      const source = getSource();
+      if (!source.trim()) {
+        $("iaeAuditStatus").textContent = "No HTML source found. Paste or load the page source first.";
+        return;
+      }
+      state.source = source;
+      state.findings = audit(source);
+      render(state.findings);
+      $("iaeAuditStatus").textContent = `Audit complete: ${state.findings.length} finding(s). No source was changed.`;
+    });
+
+    $("iaeCleanLines").addEventListener("click", () => {
+      const source = getSource();
+      if (!source.trim()) {
+        $("iaeAuditStatus").textContent = "No HTML source found. Paste or load the page source first.";
+        return;
+      }
+      const result = removeDuplicatePlainTextLines(source);
+      $("iaeCleanOutput").value = result.source;
+      $("iaeDownloadClean").disabled = result.removed === 0;
+      $("iaeAuditStatus").textContent = result.removed
+        ? `Built a separate copy; removed ${result.removed} exact duplicate standalone plain-text line(s). Markup/code lines were retained. Original source unchanged.`
+        : "No safe duplicate standalone plain-text lines found. Markup/code lines were retained.";
+    });
+
+    $("iaeDownloadClean").addEventListener("click", () => {
+      const value = $("iaeCleanOutput").value;
+      if (!value) return;
+      const url = URL.createObjectURL(new Blob([value], { type: "text/html;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "duplicate-line-cleaned.html";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    $("iaeDownloadAudit").addEventListener("click", () => {
+      if (!state.findings.length) {
+        $("iaeAuditStatus").textContent = "Run the audit before downloading its report.";
+        return;
+      }
+      const report = [
+        "IAE WHOLE-FILE AUDIT REPORT",
+        `Generated: ${new Date().toISOString()}`,
+        `Findings: ${state.findings.length}`,
+        "",
+        ...state.findings.map((f, i) => `${i + 1}. [${f.level.toUpperCase()}] ${f.title}\n${f.detail}`)
+      ].join("\n\n");
+      const url = URL.createObjectURL(new Blob([report], { type: "text/plain;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "iae-whole-file-audit.txt";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+  }
+
+  function getSource() {
+    const selectors = [
+      "#htmlSource", "#htmlInput", "#sourceHtml", "#inputHtml",
+      "textarea[name='html']", "textarea[data-role='html-source']"
+    ];
+    for (const selector of selectors) {
+      const node = document.querySelector(selector);
+      if (node && typeof node.value === "string" && node.value.trim()) return node.value;
+    }
+    return "";
+  }
+
+  function audit(source) {
+    const findings = [];
+    const add = (level, title, detail) => findings.push({ level, title, detail });
+    const classUse = new Map();
+    const idUse = new Map();
+    const textUse = new Map();
+    const cssClassRefs = new Set();
+    const cssIdRefs = new Set();
+    const jsIdRefs = new Set();
+    const jsClassRefs = new Set();
+    let doc;
+
+    try {
+      doc = new DOMParser().parseFromString(source, "text/html");
+    } catch (error) {
+      return [{ level: "high", title: "HTML parsing failed", detail: String(error) }];
+    }
+
+    for (const el of doc.querySelectorAll("*")) {
+      const tag = el.tagName.toLowerCase();
+      const id = el.getAttribute("id");
+      if (id) {
+        if (!idUse.has(id)) idUse.set(id, []);
+        idUse.get(id).push(tag);
+      }
+      for (const cls of el.classList) {
+        if (!classUse.has(cls)) classUse.set(cls, []);
+        classUse.get(cls).push(tag);
+      }
+      if (el.children.length === 0) {
+        const visible = (el.textContent || "").replace(/\s+/g, " ").trim();
+        if (visible.length >= 3) {
+          const key = `${tag}::${visible.toLocaleLowerCase()}`;
+          if (!textUse.has(key)) textUse.set(key, []);
+          textUse.get(key).push({ tag, visible, id: id || "", cls: [...el.classList].join(" ") });
+        }
+      }
+    }
+
+    for (const [id, tags] of idUse) {
+      if (tags.length > 1) add("high", `Duplicate HTML id: #${id}`,
+        `Used ${tags.length} times on: ${tags.join(", ")}. Check labels, CSS and JavaScript references before renaming.`);
+    }
+
+    const cssBlocks = [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)].map(m => m[1]);
+    const selectorList = [];
+    for (const css of cssBlocks) {
+      for (const match of css.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
+        const selector = match[1].trim();
+        if (!selector || selector.startsWith("@")) continue;
+        selectorList.push(selector);
+        for (const m of selector.matchAll(/\.([_a-zA-Z][\w-]*)/g)) cssClassRefs.add(m[1]);
+        for (const m of selector.matchAll(/#([_a-zA-Z][\w-]*)/g)) cssIdRefs.add(m[1]);
+      }
+    }
+
+    const js = [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)].map(m => m[1]).join("\n");
+    for (const m of js.matchAll(/getElementById\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g)) jsIdRefs.add(m[1]);
+    for (const m of js.matchAll(/querySelector(?:All)?\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g)) {
+      const sel = m[1];
+      for (const x of sel.matchAll(/\.([_a-zA-Z][\w-]*)/g)) jsClassRefs.add(x[1]);
+      for (const x of sel.matchAll(/#([_a-zA-Z][\w-]*)/g)) jsIdRefs.add(x[1]);
+    }
+    for (const m of js.matchAll(/classList\.(?:add|remove|toggle|contains)\s*\(\s*['"`]([\w-]+)['"`]/g)) jsClassRefs.add(m[1]);
+
+    // Role ledger: distinguish a class's HTML placement from detected CSS and JS roles.
+    for (const [cls, tags] of classUse) {
+      const roles = [];
+      if (cssClassRefs.has(cls)) roles.push("CSS selector role");
+      if (jsClassRefs.has(cls)) roles.push("JavaScript reference/behavior role");
+      roles.push(`HTML placement on ${[...new Set(tags)].join(", ")}`);
+      add("info", `Class role ledger: .${cls}`,
+        `Occurrences: ${tags.length}. Detected roles: ${roles.join("; ")}. A class may serve multiple roles; preserve each live role before removing or consolidating it.`);
+    }
+
+    // Co-located classes are candidates for role overlap, not automatic deletion.
+    const coLocated = new Map();
+    for (const el of doc.querySelectorAll("[class]")) {
+      const classes = [...el.classList].sort();
+      if (classes.length < 2) continue;
+      const area = el.closest("section, article, main, [data-section], [role='region']");
+      const areaName = area ? (area.id ? `#${area.id}` : area.tagName.toLowerCase()) : (el.parentElement?.tagName.toLowerCase() || "document");
+      const key = `${areaName}::${classes.join("+")}`;
+      if (!coLocated.has(key)) coLocated.set(key, { areaName, classes, count: 0 });
+      coLocated.get(key).count++;
+    }
+    for (const entry of coLocated.values()) {
+      add("review", `Co-located class roles in ${entry.areaName}`,
+        `Class tokens .${entry.classes.join(" .")} occur together on ${entry.count} element(s). Compare their actual responsibilities; if one role is redundant, retain any other role still needed elsewhere.`);
+    }
+
+    for (const [cls, tags] of classUse) {
+      if (!cssClassRefs.has(cls) && !jsClassRefs.has(cls)) {
+        add("review", `Class has no detected CSS/JS reference: .${cls}`,
+          `Present on ${tags.length} element(s): ${tags.slice(0, 8).join(", ")}${tags.length > 8 ? ", …" : ""}. Could be externally styled or dynamically used; verify before removing.`);
+      }
+    }
+    for (const cls of cssClassRefs) {
+      if (!classUse.has(cls) && !jsClassRefs.has(cls)) add("review", `CSS class not found in static HTML: .${cls}`,
+        "Possible stale CSS, or the class may be added dynamically. Check runtime behavior before removal.");
+    }
+    for (const id of cssIdRefs) {
+      if (!idUse.has(id) && !jsIdRefs.has(id)) add("review", `CSS ID selector not found in static HTML: #${id}`,
+        "Possible stale selector, or the element may be generated dynamically. Verify before removal.");
+    }
+    for (const [id] of idUse) {
+      if (!cssIdRefs.has(id) && !jsIdRefs.has(id)) add("info", `ID has no detected CSS/JS reference: #${id}`,
+        "This may be an intentional anchor or external integration point. Confirm its role before removal.");
+    }
+
+    const selectorCounts = new Map();
+    for (const selector of selectorList) selectorCounts.set(selector, (selectorCounts.get(selector) || 0) + 1);
+    for (const [selector, count] of selectorCounts) {
+      if (count > 1) add("review", `Repeated CSS selector: ${selector}`,
+        `Found ${count} occurrences. Compare declarations, media queries and cascade order before merging.`);
+    }
+
+    for (const [key, entries] of textUse) {
+      if (entries.length > 1) {
+        const [tag] = key.split("::");
+        add("review", `Repeated visible text (${tag}): “${entries[0].visible.slice(0, 100)}”`,
+          `Found ${entries.length} leaf elements. Inspect their section and purpose. The wording may be intentionally repeated, so it is not deleted automatically.`);
+      }
+    }
+
+    const seenLines = new Map();
+    source.split(/\r?\n/).forEach((raw, i) => {
+      const line = raw.trim();
+      if (!line) return;
+      if (!seenLines.has(line)) seenLines.set(line, []);
+      seenLines.get(line).push(i + 1);
+    });
+    for (const [line, lines] of seenLines) {
+      if (lines.length < 2) continue;
+      const structural = /[<>`{};]/.test(line) || /^(?:\/\/|\/\*|\*|<!--|-->|#|@|const\b|let\b|var\b|function\b|return\b|if\b|else\b|for\b|while\b)/i.test(line);
+      add(structural ? "info" : "review",
+        `${structural ? "Repeated structural/code line" : "Exact duplicate plain-text candidate"} (lines ${lines.join(", ")})`,
+        `${line.slice(0, 180)}${line.length > 180 ? "…" : ""}${structural ? " — retained; repeated code/markup may be required." : " — review in context before removing; this audit does not delete source lines."}`);
+    }
+
+    if (!findings.length) add("info", "No static findings", "The conservative scan found no likely issues. Static inspection cannot prove all dynamic behavior or runtime dependencies.");
+    const priority = { high: 0, warning: 1, review: 2, info: 3 };
+    findings.sort((a, b) => (priority[a.level] ?? 4) - (priority[b.level] ?? 4));
+    return findings;
+  }
+
+  function removeDuplicatePlainTextLines(source) {
+    const seen = new Set();
+    let removed = 0;
+    const lines = source.split(/\r\n|\n|\r/);
+    const output = lines.filter((raw) => {
+      const line = raw.trim();
+      if (!line) return true;
+      // Do not remove markup, comments, CSS/JS, or structural/code-like lines.
+      const codeLike = /[<>`{};]/.test(line) || /^(?:\/\/|\/\*|\*|<!--|-->|#|@|const\b|let\b|var\b|function\b|return\b|if\b|else\b|for\b|while\b|import\b|export\b|class\b|def\b|async\b)/i.test(line);
+      if (codeLike) return true;
+      if (seen.has(line)) { removed++; return false; }
+      seen.add(line);
+      return true;
+    });
+    return { source: output.join("\n"), removed };
+  }
+
+  function render(findings) {
+    const root = $("iaeAuditResults");
+    root.replaceChildren();
+    for (const finding of findings) {
+      const item = document.createElement("article");
+      item.className = "result-item";
+      const heading = document.createElement("strong");
+      heading.textContent = `[${finding.level.toUpperCase()}] ${finding.title}`;
+      const detail = document.createElement("p");
+      detail.textContent = finding.detail;
+      item.append(heading, detail);
+      root.appendChild(item);
+    }
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", makePanel, { once: true });
+  else makePanel();
+})();
+
 </script></body></html>
